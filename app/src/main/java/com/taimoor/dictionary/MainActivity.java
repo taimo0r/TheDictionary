@@ -1,14 +1,8 @@
 package com.taimoor.dictionary;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.SearchView;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -17,15 +11,17 @@ import android.provider.Settings;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.inputmethod.CompletionInfo;
-import android.widget.AdapterView;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.material.snackbar.Snackbar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.taimoor.dictionary.Adapters.MeaningAdapter;
 import com.taimoor.dictionary.Adapters.PhoneticsAdapter;
 import com.taimoor.dictionary.Database.AppDatabase;
@@ -33,7 +29,6 @@ import com.taimoor.dictionary.Database.SearchedWords;
 import com.taimoor.dictionary.Models.APIResponse;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -75,43 +70,48 @@ public class MainActivity extends AppCompatActivity {
         RequestManager manager = new RequestManager(MainActivity.this);
         manager.getWordMeaning(listener, "Hello");
 
-        autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                query = null;
-                query = autoCompleteTextView.getText().toString();
-                progressDialog.setTitle("Fetching Response for " + query);
-                progressDialog.show();
-                RequestManager manager = new RequestManager(MainActivity.this);
-                manager.getWordMeaning(listener, query);
+        autoCompleteTextView.setOnItemClickListener((adapterView, view, i, l) -> {
+            query = null;
+            query = autoCompleteTextView.getText().toString();
+
+            InputMethodManager imm = (InputMethodManager) MainActivity.this.getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
             }
+
+            progressDialog.setTitle("Fetching Response for " + query);
+            progressDialog.show();
+            RequestManager manager12 = new RequestManager(MainActivity.this);
+            manager12.getWordMeaning(listener, query);
         });
 
-        autoCompleteTextView.setOnKeyListener(new View.OnKeyListener() {
-            @Override
-            public boolean onKey(View view, int i, KeyEvent keyEvent) {
-                query = null;
-                query = autoCompleteTextView.getText().toString();
-                if (!query.equals("")) {
-                    if (i == KeyEvent.KEYCODE_ENTER) {
-                        progressDialog.setTitle("Fetching Response for " + query);
-                        progressDialog.show();
-                        RequestManager manager = new RequestManager(MainActivity.this);
-                        manager.getWordMeaning(listener, query);
-                        saveWord(query);
-                        return true;
+        autoCompleteTextView.setOnKeyListener((view, i, keyEvent) -> {
+            query = null;
+            query = autoCompleteTextView.getText().toString();
+            if (!query.equals("")) {
+                if (i == KeyEvent.KEYCODE_ENTER) {
+
+                    InputMethodManager imm = (InputMethodManager) MainActivity.this.getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) {
+                        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
                     }
-                } else {
-                    Toast.makeText(MainActivity.this, "Please enter a word to search!", Toast.LENGTH_SHORT).show();
-                    return false;
+
+                    progressDialog.setTitle("Fetching Response for " + query);
+                    progressDialog.show();
+                    RequestManager manager1 = new RequestManager(MainActivity.this);
+                    manager1.getWordMeaning(listener, query);
+                    saveWord(query);
+                    return true;
                 }
+            } else {
+                Toast.makeText(MainActivity.this, "Please enter a word to search!", Toast.LENGTH_SHORT).show();
                 return false;
             }
+            return false;
         });
 
         if (!isConnected(this)) {
             showCustomDialog();
-            return;
         }
     }
 
@@ -164,18 +164,8 @@ public class MainActivity extends AppCompatActivity {
 
         builder.setMessage("Please check your internet connection before logging in")
                 .setCancelable(false)
-                .setPositiveButton("Connect", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
-                    }
-                })
-                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        Toast.makeText(MainActivity.this, "Connect to internet to load wallpapers", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                .setPositiveButton("Connect", (dialogInterface, i) -> startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS)))
+                .setNegativeButton("Cancel", (dialogInterface, i) -> Toast.makeText(MainActivity.this, "Connect to internet to load wallpapers", Toast.LENGTH_SHORT).show());
 
         AlertDialog alert = builder.create();
         alert.show();
@@ -188,11 +178,7 @@ public class MainActivity extends AppCompatActivity {
         NetworkInfo wifiConn = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
         NetworkInfo mobileConn = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
 
-        if ((wifiConn != null && wifiConn.isConnected()) || (mobileConn != null && mobileConn.isConnected())) {
-            return true;
-        } else {
-            return false;
-        }
+        return (wifiConn != null && wifiConn.isConnected()) || (mobileConn != null && mobileConn.isConnected());
     }
 
 }
